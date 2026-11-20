@@ -253,7 +253,7 @@
               <tr>
                 <td>Claude in Chrome</td>
                 <td>Caught</td>
-                <td class="num">0.80</td>
+                <td class="num">0.76</td>
                 <td>Clicks with no pointer travel, machine-regular typing</td>
               </tr>
               <tr>
@@ -344,9 +344,12 @@
 
     document.getElementById('copy').addEventListener('click', function (e) {
       var button = e.currentTarget;
+      // No clipboard access (plain HTTP, permission denied): select the prompt instead.
+      function select() { getSelection().selectAllChildren(prompt); }
+      if (!navigator.clipboard) return select();
       navigator.clipboard.writeText(prompt.textContent).then(function () {
         button.textContent = 'Prompt copied';
-      });
+      }, select);
     });
 
     document.querySelectorAll('.course button').forEach(function (button) {
