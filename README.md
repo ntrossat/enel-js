@@ -3,8 +3,6 @@
   <img src="assets/banner-light.png" alt="enel.js: identify AI agents on a webpage. One file, no dependencies.">
 </picture>
 
-# enel-js
-
 Identify AI agents on a webpage. One file, no dependencies, runs entirely in the browser.
 
 **[Try the live demo](https://ntrossat.github.io/enel-js/)** · [Install](#install) · [Results](#results) · [Signals](#signals) · [Limits](#limits)
@@ -17,7 +15,17 @@ Named after Enel, whose Mantra senses every presence on Skypiea.
 <script src="https://cdn.jsdelivr.net/gh/ntrossat/enel-js/enel.js"></script>
 ```
 
-Or copy `enel.js` into your project. It also loads with `require('./enel.js')`.
+Or with npm:
+
+```sh
+npm install enel-js
+```
+
+```js
+const Enel = require('enel-js');
+```
+
+Or copy `enel.js` into your project.
 
 ## Usage
 
@@ -112,3 +120,7 @@ npm test
 ```
 
 Open `index.html` in a browser to watch the signals live.
+
+## License
+
+[MIT](LICENSE)

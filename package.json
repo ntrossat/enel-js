@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "Identify AI agents on a webpage",
   "main": "enel.js",
-  "files": ["enel.js"],
+  "files": [
+    "enel.js"
+  ],
   "scripts": {
     "test": "node --test"
   },
@@ -11,5 +13,13 @@
     "type": "git",
     "url": "git+https://github.com/ntrossat/enel-js.git"
   },
-  "keywords": ["ai-agent", "agent-detection", "bot-detection", "browser"]
+  "keywords": [
+    "ai-agent",
+    "agent-detection",
+    "bot-detection",
+    "browser"
+  ],
+  "license": "MIT",
+  "author": "Nicolas Trossat",
+  "homepage": "https://ntrossat.github.io/enel-js/"
 }
