@@ -46,6 +46,16 @@ test('automation globals are flagged', () => {
   assert.deepStrictEqual(ids(res), ['automation-globals']);
 });
 
+test('chromedriver properties are flagged on window and document', () => {
+  const onWindow = Enel.detect({ window: fakeWindow({}, { cdc_adoQpoasnfa76pfcZLmcfl_Array: Array }) });
+  assert.deepStrictEqual(ids(onWindow), ['automation-globals']);
+
+  const onDocument = Enel.detect({
+    window: fakeWindow({}, { document: { querySelector: () => null, $cdc_asdjflasutopfhvcZLmcfl_: {} } }),
+  });
+  assert.deepStrictEqual(ids(onDocument), ['automation-globals']);
+});
+
 test('weak signals stay under the threshold alone and combine above it', () => {
   const one = Enel.detect({ window: fakeWindow({ languages: [] }) });
   assert.strictEqual(one.isAgent, false);
@@ -101,6 +111,22 @@ test('touch, keyboard and double clicks are ignored', () => {
   tracker.handle('click', { isTrusted: true, detail: 1, pointerType: 'mouse', clientX: 200, clientY: 200 });
   tracker.handle('click', { isTrusted: true, detail: 2, pointerType: 'mouse', clientX: 200, clientY: 200 });
   assert.deepStrictEqual(reports, []);
+});
+
+test('taps are ignored when the click carries no pointer type', () => {
+  const { reports, tracker } = track();
+  tracker.handle('pointerdown', { isTrusted: true, pointerType: 'touch' });
+  tracker.handle('click', { isTrusted: true, detail: 1, clientX: 100, clientY: 100 });
+  tracker.handle('pointerdown', { isTrusted: true, pointerType: 'touch' });
+  tracker.handle('click', { isTrusted: true, detail: 1, clientX: 400, clientY: 300 });
+  assert.deepStrictEqual(reports, []);
+});
+
+test('script-generated mouse moves do not count as pointer travel', () => {
+  const { reports, tracker } = track();
+  for (let i = 0; i < 10; i++) tracker.handle('mousemove', { isTrusted: false });
+  tracker.handle('click', { isTrusted: true, detail: 1, pointerType: 'mouse', clientX: 100, clientY: 100 });
+  assert.deepStrictEqual(reports.map((r) => r.id), ['click-without-movement']);
 });
 
 test('script-generated events are flagged', () => {

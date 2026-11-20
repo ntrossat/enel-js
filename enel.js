@@ -58,10 +58,11 @@
     }
 
     const found = AUTOMATION_GLOBALS.filter((name) => name in win);
-    const doc = win.document;
-    if (doc) {
-      // chromedriver adds properties such as document.$cdc_asdjflasutopfhvcZLmcfl_
-      for (const key of Object.keys(doc)) if (/^\$?cdc_/.test(key)) found.push(key);
+    // chromedriver adds properties such as document.$cdc_asdjflasutopfhvcZLmcfl_
+    // or, in recent versions, window.cdc_adoQpoasnfa76pfcZLmcfl_Array
+    for (const target of [win, win.document]) {
+      if (!target) continue;
+      for (const key of Object.keys(target)) if (/^\$?cdc_/.test(key)) found.push(key);
     }
     if (found.length) {
       out.push({ id: 'automation-globals', weight: 0.9, detail: found.join(', ') });
@@ -110,9 +111,12 @@
     let jumpClicks = 0;
     let lastKey = 0;
     let gaps = [];
+    let pointer = null;
 
     function handle(type, e) {
-      if (type === 'mousemove') { moves++; return; }
+      if (type === 'mousemove') { if (e.isTrusted !== false) moves++; return; }
+      // Safari clicks carry no pointerType, so remember it from the press.
+      if (type === 'pointerdown') { if (e.isTrusted !== false) pointer = e.pointerType; return; }
 
       if (e.isTrusted === false) {
         report({ id: 'untrusted-event', weight: 0.25, detail: 'script-generated ' + type });
@@ -121,8 +125,8 @@
 
       if (type === 'click') {
         // detail is 0 for keyboard-activated clicks; touch and pen have no hover.
-        const mouse = e.detail > 0 && (e.pointerType == null || e.pointerType === 'mouse');
-        if (!mouse) return;
+        const kind = e.pointerType || pointer;
+        if (!(e.detail > 0) || (kind && kind !== 'mouse')) return;
         const moved = !lastClick ||
           Math.abs(e.clientX - lastClick.x) > 20 || Math.abs(e.clientY - lastClick.y) > 20;
         if (moved && moves < 3) {
@@ -144,10 +148,10 @@
         if (lastKey && t - lastKey < 2000) gaps.push(t - lastKey);
         else gaps = [];
         lastKey = t;
-        if (gaps.length >= 8) {
-          const recent = gaps.slice(-8);
-          const mean = recent.reduce((a, b) => a + b, 0) / recent.length;
-          const sd = Math.sqrt(recent.reduce((a, b) => a + (b - mean) * (b - mean), 0) / recent.length);
+        if (gaps.length > 8) gaps.shift();
+        if (gaps.length === 8) {
+          const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+          const sd = Math.sqrt(gaps.reduce((a, b) => a + (b - mean) * (b - mean), 0) / gaps.length);
           if (mean < 15 || sd < 8) {
             report({
               id: 'robotic-typing',
@@ -206,7 +210,7 @@
 
     if (doc && doc.addEventListener) {
       const tracker = createTracker(report, () => Date.now());
-      for (const type of ['mousemove', 'click', 'keydown']) {
+      for (const type of ['mousemove', 'pointerdown', 'click', 'keydown']) {
         const listener = (e) => tracker.handle(type, e);
         doc.addEventListener(type, listener, true);
         cleanups.push(() => doc.removeEventListener(type, listener, true));
