@@ -75,6 +75,22 @@ A `enel:detect` event is also dispatched on `window`, with the result in `event.
 
 Weights combine as `1 - product(1 - weight)`, so two weak signals count for more than one.
 
+## Results
+
+Each agent was sent to the demo page to press three buttons and type a word.
+
+| Agent | Detected | Confidence | Named | Signals |
+|---|---|---|---|---|
+| Claude in Chrome, driven from Claude Code | Yes | 0.80 | No | `click-without-movement`, `robotic-typing` |
+| Playwright, headless Chromium | Yes, on load | 0.90 | No | `headless-user-agent` |
+| ChatGPT Atlas | Not tested yet | | | |
+| ChatGPT agent | Not tested yet | | | |
+| Perplexity Comet | Not tested yet | | | |
+| Puppeteer | Not tested yet | | | |
+| Selenium | Not tested yet | | | |
+
+Last run on 2026-11-20. Tried another agent? Open `index.html`, send it there and add a row.
+
 ## Limits
 
 - This is a heuristic. Agentic browsers such as ChatGPT Atlas and Perplexity Comet present themselves as regular Chrome, so only the behavior signals can catch them, and those need the agent to click or type first.
@@ -88,4 +104,4 @@ Weights combine as `1 - product(1 - weight)`, so two weak signals count for more
 npm test
 ```
 
-Open `demo.html` in a browser to watch the signals live.
+Open `index.html` in a browser to watch the signals live.

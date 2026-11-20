@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Can your AI agent be detected? enel.js</title>
+  <meta name="description" content="Send your AI agent to this page and see whether enel.js senses it.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap">
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --ink: #14161f;
+      --quiet: rgba(20, 22, 31, 0.74);
+      --rule: rgba(20, 22, 31, 0.18);
+      --track: rgba(20, 22, 31, 0.14);
+      --accent: #14161f;
+      --panel: #ffffff;
+      --end: #14161f;
+    }
+    body.sensed {
+      --bg: #14161f;
+      --ink: #f3f4f6;
+      --quiet: rgba(243, 244, 246, 0.76);
+      --rule: rgba(243, 244, 246, 0.22);
+      --track: rgba(243, 244, 246, 0.18);
+      --accent: #5cc8ff;
+      --panel: #f3f4f6;
+      --end: #252937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 400 1.0625rem/1.5 'Bricolage Grotesque', system-ui, sans-serif;
+    }
+    body.sensed { animation: strike 0.6s ease-out; }
+    @keyframes strike {
+      0%, 12% { background: #ffffff; }
+      100% { background: #14161f; }
+    }
+
+    .page { max-width: 70rem; margin: 0 auto; padding: 1.75rem 1.5rem 4.5rem; }
+    a { color: inherit; text-underline-offset: 0.2em; }
+    a:hover { opacity: 0.75; }
+    :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    h2 { margin: 0 0 0.625rem; font-size: 1.75rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
+    p { margin: 0 0 1.25rem; }
+
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+    .brand { display: flex; align-items: center; gap: 0.625rem; font-size: 1.25rem; font-weight: 800; }
+    .brand path { fill: var(--accent); }
+    .pill, button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 3rem;
+      padding: 0 1.375rem;
+      background: transparent;
+      color: var(--ink);
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    button:hover, button.solid, button[aria-pressed='true'] { background: var(--ink); color: var(--panel); }
+    button.solid:hover { opacity: 0.85; }
+
+    .hero { display: flex; flex-wrap: wrap; align-items: center; gap: 3rem; padding: 4.5rem 0 5.5rem; }
+    .verdict { flex: 999 1 32rem; min-width: 0; }
+    .verdict h1 {
+      margin: 0;
+      font-size: clamp(3.25rem, 9vw, 8rem);
+      font-weight: 800;
+      line-height: 0.92;
+      letter-spacing: -0.04em;
+      overflow-wrap: break-word;
+    }
+    .sensed .verdict h1 { color: var(--accent); }
+    .verdict > p { margin: 1.75rem 0 0; font-size: 1.3125rem; }
+
+    .meter { max-width: 32.5rem; margin-top: 2.5rem; }
+    .meter-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; }
+    .meter-head output { font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .meter-track { position: relative; height: 0.875rem; margin-top: 0.625rem; background: var(--track); border-radius: 999px; }
+    .meter-fill { width: 0; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.4s ease-out; }
+    /* The threshold, at 0.50 */
+    .meter-track::after { content: ''; position: absolute; left: 50%; top: -7px; width: 2px; height: 28px; background: var(--ink); }
+    .meter p { margin: 0.875rem 0 0; font-size: 0.9375rem; color: var(--quiet); }
+
+    .mantra { flex: 1 1 14rem; display: flex; justify-content: center; }
+    .mantra svg { width: 100%; max-width: 21rem; height: auto; }
+    .mantra .ring { fill: none; stroke: var(--ink); stroke-width: 2; }
+    .mantra .dot { fill: var(--ink); }
+    .mantra .halo, .mantra .disc, .mantra .bolt { display: none; }
+    .sensed .mantra .ring { stroke: var(--accent); }
+    .sensed .mantra .dot, .sensed .mantra .inner { display: none; }
+    .sensed .mantra .halo, .sensed .mantra .disc { display: inline; fill: var(--accent); }
+    .sensed .mantra .bolt { display: inline; fill: var(--bg); }
+
+    .columns { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 3.5rem; }
+    /* The panel stays light in both states, so it carries its own ink. */
+    .panel {
+      --ink: #14161f;
+      flex: 1 1 23rem;
+      min-width: 0;
+      padding: 2.25rem;
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 1.75rem;
+    }
+    .prompt { margin-bottom: 1rem; padding: 1rem 1.125rem; background: rgba(20, 22, 31, 0.06); border-radius: 1rem; overflow-wrap: anywhere; }
+    /* Spread apart on purpose: each press has to land somewhere new. */
+    .course { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; margin: 2.5rem 0 1rem; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+    input {
+      width: 100%;
+      min-height: 3.25rem;
+      padding: 0 1.25rem;
+      background: #ffffff;
+      color: var(--ink);
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      font: inherit;
+    }
+
+    .signals-wrap { flex: 1.4 1 27rem; min-width: 0; }
+    .signals { margin: 0.5rem 0 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+    .signals li {
+      display: grid;
+      grid-template-columns: 1.375rem minmax(0, 1fr) auto;
+      column-gap: 0.625rem;
+      align-items: baseline;
+      padding: 0.8125rem 0;
+      border-bottom: 1px solid var(--rule);
+      color: var(--quiet);
+    }
+    .signals li::before { content: ''; width: 0.625rem; height: 0.625rem; border: 2px solid currentColor; border-radius: 50%; }
+    .signals .fired { color: var(--ink); font-weight: 600; }
+    .signals .fired::before { background: var(--accent); border-color: var(--accent); }
+    .signals .weight { font-variant-numeric: tabular-nums; }
+    .signals .detail { grid-column: 2 / -1; font-weight: 400; overflow-wrap: anywhere; }
+    .signals .detail:empty { display: none; }
+
+    .results { margin-top: 6rem; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; min-width: 40rem; border-collapse: collapse; text-align: left; }
+    th, td { padding: 1rem; border-bottom: 1px solid var(--rule); }
+    th { padding-block: 0.75rem; border-bottom: 2px solid var(--ink); font-weight: 600; }
+    th:first-child, td:first-child { padding-left: 0; }
+    th:last-child, td:last-child { padding-right: 0; }
+    td:first-child { font-weight: 600; }
+    td.num { font-variant-numeric: tabular-nums; }
+    td.todo { color: var(--quiet); }
+
+    .install { margin-top: 6rem; padding: 2.5rem; background: var(--end); color: #ffffff; border-radius: 1.75rem; }
+    .install p { color: rgba(255, 255, 255, 0.82); }
+    pre {
+      margin: 0;
+      padding: 1.25rem 1.375rem;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      font: 0.9375rem/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+      overflow-x: auto;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body.sensed { animation: none; }
+      .meter-fill { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <div class="brand">
+        <svg aria-hidden="true" width="22" height="28" viewBox="0 0 22 28"><path d="M14 0 L0 16 H9 L6 28 L22 10 H12 Z"/></svg>
+        <span>enel.js</span>
+      </div>
+      <a class="pill" href="https://github.com/ntrossat/enel-js">View on GitHub</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="verdict">
+          <div aria-live="polite">
+            <h1 id="verdict">No agent sensed.</h1>
+          </div>
+          <p id="status">Watching clicks, keys and the page itself.</p>
+          <div class="meter">
+            <div class="meter-head">
+              <span>Confidence</span>
+              <output id="confidence">0.00</output>
+            </div>
+            <div class="meter-track"><div class="meter-fill" id="fill"></div></div>
+            <p>The mark is 0.50. From there on, the visitor counts as an agent.</p>
+          </div>
+        </div>
+        <div class="mantra">
+          <svg aria-hidden="true" viewBox="0 0 320 320">
+            <circle class="halo" cx="160" cy="160" r="156" opacity="0.12"/>
+            <circle class="halo" cx="160" cy="160" r="118" opacity="0.2"/>
+            <circle class="ring" cx="160" cy="160" r="156" opacity="0.2"/>
+            <circle class="ring" cx="160" cy="160" r="118" opacity="0.35"/>
+            <circle class="ring inner" cx="160" cy="160" r="80" opacity="0.5"/>
+            <circle class="ring inner" cx="160" cy="160" r="42" opacity="0.7"/>
+            <circle class="dot" cx="160" cy="160" r="9"/>
+            <circle class="disc" cx="160" cy="160" r="80"/>
+            <path class="bolt" d="M176 104 L128 168 H156 L144 216 L192 150 H164 Z"/>
+          </svg>
+        </div>
+      </section>
+
+      <div class="columns">
+        <section class="panel">
+          <h2>Send your agent here</h2>
+          <p>Give this prompt to Claude in Chrome, ChatGPT Atlas, Comet or any agent that drives a browser, then watch this page.</p>
+          <p class="prompt" id="prompt"></p>
+          <button type="button" class="solid" id="copy">Copy prompt</button>
+
+          <div class="course">
+            <button type="button" aria-pressed="false">Thunder</button>
+            <button type="button" aria-pressed="false">Cloud</button>
+            <button type="button" aria-pressed="false">Sky</button>
+          </div>
+          <label for="word">Type a word</label>
+          <input id="word" placeholder="hello" autocomplete="off">
+        </section>
+
+        <section class="signals-wrap">
+          <h2>What gives an agent away</h2>
+          <ul class="signals" id="signals"></ul>
+        </section>
+      </div>
+
+      <section class="results">
+        <h2>Who gets caught</h2>
+        <p>Each agent was sent here to press the three buttons and type a word.</p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Agent</th>
+                <th scope="col">Verdict</th>
+                <th scope="col">Confidence</th>
+                <th scope="col">What gave it away</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Claude in Chrome</td>
+                <td>Caught</td>
+                <td class="num">0.80</td>
+                <td>Clicks with no pointer travel, machine-regular typing</td>
+              </tr>
+              <tr>
+                <td>Playwright, headless Chromium</td>
+                <td>Caught on load</td>
+                <td class="num">0.90</td>
+                <td>A headless browser</td>
+              </tr>
+              <tr>
+                <td>ChatGPT Atlas, ChatGPT agent, Comet, Puppeteer, Selenium</td>
+                <td class="todo" colspan="3">Not tested yet. <a href="https://github.com/ntrossat/enel-js">Send one here and add a row.</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="install">
+        <h2>Put it on your own page</h2>
+        <p>One file, no dependencies.</p>
+        <pre>&lt;script src="https://cdn.jsdelivr.net/gh/ntrossat/enel-js/enel.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  Enel.start({ onDetect: (result) =&gt; console.log(result) });
+&lt;/script&gt;</pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="enel.js"></script>
+  <script>
+    var SIGNALS = {
+      'declared-user-agent': 'A user agent that names an AI agent',
+      'dom-marker': 'An element the agent injects into the page',
+      'webdriver': 'navigator.webdriver is on',
+      'headless-user-agent': 'A headless browser',
+      'automation-globals': 'Globals left by an automation framework',
+      'click-without-movement': 'Clicks that land with no pointer travel',
+      'robotic-typing': 'Keystrokes at machine-regular intervals',
+      'no-languages': 'No browser languages',
+      'no-window-size': 'A window that measures 0 by 0',
+      'untrusted-event': 'Clicks or keys generated by script',
+    };
+
+    var verdict = document.getElementById('verdict');
+    var statusLine = document.getElementById('status');
+    var confidence = document.getElementById('confidence');
+    var fill = document.getElementById('fill');
+    var rows = {};
+
+    Object.keys(SIGNALS).forEach(function (id) {
+      var li = document.createElement('li');
+      var name = document.createElement('span');
+      var weight = document.createElement('span');
+      var detail = document.createElement('span');
+      name.textContent = SIGNALS[id];
+      weight.className = 'weight';
+      detail.className = 'detail';
+      li.append(name, weight, detail);
+      document.getElementById('signals').appendChild(li);
+      rows[id] = { li: li, weight: weight, detail: detail };
+    });
+
+    function render(result) {
+      document.body.classList.toggle('sensed', result.isAgent);
+      verdict.textContent = result.isAgent
+        ? 'Agent sensed' + (result.agent ? ': ' + result.agent + '.' : '.')
+        : 'No agent sensed.';
+      confidence.textContent = result.confidence.toFixed(2);
+      fill.style.width = result.confidence * 100 + '%';
+
+      var names = [];
+      result.signals.forEach(function (signal) {
+        var row = rows[signal.id];
+        if (!row) return;
+        names.push(SIGNALS[signal.id].charAt(0).toLowerCase() + SIGNALS[signal.id].slice(1));
+        row.li.className = 'fired';
+        row.weight.textContent = signal.weight.toFixed(2);
+        row.detail.textContent = signal.detail;
+      });
+      statusLine.textContent = names.length
+        ? (result.isAgent ? 'Given away by ' : 'Not enough yet: ') + names.join(', ') + '.'
+        : 'Watching clicks, keys and the page itself.';
+    }
+
+    var prompt = document.getElementById('prompt');
+    prompt.textContent = 'Open ' + location.href.split('#')[0] +
+      ' then press Thunder, Cloud and Sky, and type hello in the field.';
+
+    document.getElementById('copy').addEventListener('click', function (e) {
+      var button = e.currentTarget;
+      navigator.clipboard.writeText(prompt.textContent).then(function () {
+        button.textContent = 'Prompt copied';
+      });
+    });
+
+    document.querySelectorAll('.course button').forEach(function (button) {
+      button.addEventListener('click', function () { button.setAttribute('aria-pressed', 'true'); });
+    });
+
+    var enel = Enel.start({ onChange: render });
+    render(enel.result());
+  </script>
+</body>
+</html>
