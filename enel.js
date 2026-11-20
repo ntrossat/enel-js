@@ -62,7 +62,7 @@
     // or, in recent versions, window.cdc_adoQpoasnfa76pfcZLmcfl_Array
     for (const target of [win, win.document]) {
       if (!target) continue;
-      for (const key of Object.keys(target)) if (/^\$?cdc_/.test(key)) found.push(key);
+      for (const key of Object.keys(target)) if (/^\$?cdc_[a-zA-Z0-9]{22}_/.test(key)) found.push(key);
     }
     if (found.length) {
       out.push({ id: 'automation-globals', weight: 0.9, detail: found.join(', ') });
@@ -71,21 +71,23 @@
     if (Array.isArray(nav.languages) && nav.languages.length === 0) {
       out.push({ id: 'no-languages', weight: 0.4, detail: 'navigator.languages is empty' });
     }
-    if (win.outerWidth === 0 && win.outerHeight === 0) {
+    // A tab that has never been shown also measures 0x0.
+    const hidden = win.document && win.document.visibilityState === 'hidden';
+    if (win.outerWidth === 0 && win.outerHeight === 0 && !hidden) {
       out.push({ id: 'no-window-size', weight: 0.4, detail: 'outer window size is 0x0' });
     }
     return out;
   }
 
+  // Several markers can be the same injected UI, so only the first match counts.
   function markerSignals(doc, markers) {
-    const out = [];
-    if (!doc || !doc.querySelector) return out;
+    if (!doc || !doc.querySelector) return [];
     for (const marker of markers) {
       if (doc.querySelector(marker.selector)) {
-        out.push({ id: 'dom-marker', weight: 0.95, agent: marker.agent, detail: marker.selector });
+        return [{ id: 'dom-marker', weight: 0.95, agent: marker.agent, detail: marker.selector }];
       }
     }
-    return out;
+    return [];
   }
 
   // Independent signals combine as 1 - product(1 - weight).
@@ -144,7 +146,8 @@
 
       if (type === 'keydown') {
         if (e.repeat) return;
-        const t = now();
+        // The event's own time: handlers can run late when the main thread stalls.
+        const t = typeof e.timeStamp === 'number' ? e.timeStamp : now();
         if (lastKey && t - lastKey < 2000) gaps.push(t - lastKey);
         else gaps = [];
         lastKey = t;
@@ -155,7 +158,7 @@
           if (mean < 15 || sd < 8) {
             report({
               id: 'robotic-typing',
-              weight: 0.5,
+              weight: 0.4,
               detail: 'key interval ' + Math.round(mean) + 'ms, deviation ' + Math.round(sd) + 'ms',
             });
           }
@@ -185,15 +188,21 @@
     const signals = {};
     const cleanups = [];
     let detected = false;
+    let stopped = false;
 
     function result() {
       return combine(Object.keys(signals).map((id) => signals[id]), threshold);
     }
 
-    function report(signal) {
+    function add(signal) {
       const prev = signals[signal.id];
-      if (prev && prev.weight >= signal.weight) return;
+      if (prev && prev.weight >= signal.weight) return false;
       signals[signal.id] = signal;
+      return true;
+    }
+
+    function notify() {
+      if (stopped) return;
       const res = result();
       if (options.onChange) options.onChange(res);
       if (res.isAgent && !detected) {
@@ -205,8 +214,14 @@
       }
     }
 
-    staticSignals(win).forEach(report);
-    markerSignals(doc, markers).forEach(report);
+    function report(signal) {
+      if (add(signal)) notify();
+    }
+
+    // What is already there on load is announced once start() has returned,
+    // so the caller holds the handle and can still listen for the event.
+    const initial = staticSignals(win).concat(markerSignals(doc, markers));
+    if (initial.filter((s) => add(s)).length) Promise.resolve().then(notify);
 
     if (doc && doc.addEventListener) {
       const tracker = createTracker(report, () => Date.now());
@@ -217,14 +232,14 @@
       }
       if (typeof win.MutationObserver === 'function' && doc.documentElement) {
         const observer = new win.MutationObserver(() => markerSignals(doc, markers).forEach(report));
-        observer.observe(doc.documentElement, { childList: true, subtree: true });
+        observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true });
         cleanups.push(() => observer.disconnect());
       }
     }
 
     return {
       result,
-      stop() { while (cleanups.length) cleanups.pop()(); },
+      stop() { stopped = true; while (cleanups.length) cleanups.pop()(); },
     };
   }
 

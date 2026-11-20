@@ -56,6 +56,17 @@ test('chromedriver properties are flagged on window and document', () => {
   assert.deepStrictEqual(ids(onDocument), ['automation-globals']);
 });
 
+test('page globals that merely start with cdc_ are not flagged', () => {
+  const res = Enel.detect({ window: fakeWindow({}, { cdc_config: {} }) });
+  assert.deepStrictEqual(res.signals, []);
+});
+
+test('a 0x0 window is not flagged while the page is hidden', () => {
+  const document = { querySelector: () => null, visibilityState: 'hidden' };
+  const res = Enel.detect({ window: fakeWindow({}, { outerWidth: 0, outerHeight: 0, document }) });
+  assert.deepStrictEqual(res.signals, []);
+});
+
 test('weak signals stay under the threshold alone and combine above it', () => {
   const one = Enel.detect({ window: fakeWindow({ languages: [] }) });
   assert.strictEqual(one.isAgent, false);
@@ -79,6 +90,22 @@ test('custom markers are supported', () => {
   const win = fakeWindow({}, { document: { querySelector: (sel) => (sel === '.my-agent' ? {} : null) } });
   const res = Enel.detect({ window: win, markers: [{ selector: '.my-agent', agent: 'Mine' }] });
   assert.strictEqual(res.agent, 'Mine');
+});
+
+test('several matching markers count once, in detect and in start', () => {
+  const win = fakeWindow({}, { document: { querySelector: () => ({}) } });
+  const markers = [{ selector: '.my-agent', agent: 'Mine' }];
+  assert.strictEqual(Enel.detect({ window: win, markers }).confidence, 0.95);
+  assert.strictEqual(Enel.start({ window: win, markers }).result().confidence, 0.95);
+});
+
+test('signals present on load are announced after start returns', async () => {
+  let calls = 0;
+  const enel = Enel.start({ window: fakeWindow({ webdriver: true }), onDetect() { calls++; enel.stop(); } });
+  assert.strictEqual(enel.result().isAgent, true);
+  assert.strictEqual(calls, 0);
+  await Promise.resolve();
+  assert.strictEqual(calls, 1);
 });
 
 function track() {
@@ -149,4 +176,18 @@ test('metronomic typing is flagged, human typing is not', () => {
     human.tick(gap);
   }
   assert.deepStrictEqual(human.reports, []);
+});
+
+test('typing is not enough on its own', () => {
+  const { reports, tracker } = track();
+  for (let i = 0; i < 10; i++) tracker.handle('keydown', { isTrusted: true, timeStamp: i * 50 });
+  assert.ok(reports[0].weight < 0.5);
+});
+
+test('key intervals come from the event time, not from when the handler runs', () => {
+  const { reports, tracker } = track();
+  const gaps = [180, 95, 240, 130, 310, 75, 160, 220, 110, 270];
+  let t = 0;
+  for (const gap of gaps) tracker.handle('keydown', { isTrusted: true, timeStamp: (t += gap) });
+  assert.deepStrictEqual(reports, []);
 });
