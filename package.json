@@ -1,6 +1,6 @@
 {
   "name": "enel-js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Identify AI agents on a webpage",
   "main": "enel.js",
   "files": [
