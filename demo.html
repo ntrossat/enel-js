@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>enel.js demo</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    input, button { font: inherit; padding: 6px 10px; }
+    pre { background: #f4f4f4; padding: 12px; overflow: auto; }
+    #verdict { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>enel.js</h1>
+  <p>Click around and type. The result updates as signals come in.</p>
+  <p>
+    <input placeholder="Type here">
+    <button type="button">Button A</button>
+    <button type="button">Button B</button>
+  </p>
+  <p id="verdict"></p>
+  <pre id="out"></pre>
+
+  <script src="enel.js"></script>
+  <script>
+    var verdict = document.getElementById('verdict');
+    var out = document.getElementById('out');
+    function render(result) {
+      verdict.textContent = result.isAgent
+        ? 'AI agent detected' + (result.agent ? ': ' + result.agent : '')
+        : 'No agent detected';
+      out.textContent = JSON.stringify(result, null, 2);
+    }
+    var enel = Enel.start({ onChange: render });
+    render(enel.result());
+  </script>
+</body>
+</html>
